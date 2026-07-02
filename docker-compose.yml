@@ -1,0 +1,70 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: instagram-auth-app
+    ports:
+      - "8080:8080"
+    environment:
+      SORING_PROFILES_ACTIVE: dev
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIST_PORT: 6379
+      JWT_SECRET: U2Jo+8cd0A7dyDWZqR7HuPgBSM0GUuYicbD2SJf0ccw=
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - auth-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: instagram-auth-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: instagram_auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      internal: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-net
+
+    redis:
+      image: redis:7-alpine
+      container_name: instagram-auth-redis
+      ports:
+        - "6379:6379"
+      command: redis-server --save 60 1 --loglevel warning
+      volumes:
+        - redis_data:/data
+      healthcheck:
+        test: [ "CMD-SHELL", "redis-cli", "ping" ]
+        internal: 10s
+        timeout: 5s
+        retries: 5
+      networks:
+        - auth-net
+
+    mailhog:
+      image: mailhog/mailhog
+      container_name: instagram-auth-mailhog
+      ports:
+        - "1025:1025"
+        - "8025:8025"
+      networks:
+        - auth-net
+
+volumes:
+  postgres_data:
+  redis_data:

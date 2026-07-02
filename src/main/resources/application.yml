@@ -1,0 +1,70 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/instagram_auth
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
+  mail:
+    host: localhost
+    port: 1025
+    username: ${MAIL_USERNAME:test}
+    password: ${MAIL_PASSWORD:test}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+app:
+  jwt:
+    secret: U2Jo+8cd0A7dyDWZqR7HuPgBSM0GUuYicbD2SJf0ccw=
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+  otp:
+    expiry-minutes: 10
+    length: 6
+  security:
+    max-login-attempts: 5
+    lockout-duration-minutes: 30
+  rate-limit:
+    login-capacity: 10
+    login-refill-tokens: 10
+    login-refill-minutes: 1
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+
+logging:
+  level:
+    com.example: DEBUG
+    org.springframework.security: INFO
+
+
+

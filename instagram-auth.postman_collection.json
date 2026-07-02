@@ -1,0 +1,486 @@
+{
+  "info": {
+    "_postman_id": "9c1e7a30-1a2b-4f99-9bcd-instagram-auth-001",
+    "name": "Instagram Auth Service",
+    "description": "Complete API collection for the Instagram Auth Service (Spring Boot 4 + Spring Security 6).\n\n**Quick start:**\n1. Make sure the app is running on `http://localhost:8080` (run `docker-compose up`).\n2. Use *Register* → check email in Mailpit at http://localhost:8025 → use *Verify Email* with the OTP → *Login*.\n3. Tokens are auto-saved to collection variables (`accessToken`, `refreshToken`) by the login/refresh test scripts.\n4. Authenticated requests pull `{{accessToken}}` automatically.\n\nSet the `baseUrl` collection variable if your host differs from `http://localhost:8080`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "Auto-populated by Login / Refresh / Verify-Login responses."
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string",
+      "description": "Auto-populated by Login / Refresh responses."
+    },
+    {
+      "key": "testEmail",
+      "value": "prashant+test@example.com",
+      "type": "string"
+    },
+    {
+      "key": "testUsername",
+      "value": "prashant_test",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "StrongP@ss1",
+      "type": "string"
+    },
+    {
+      "key": "otp",
+      "value": "",
+      "type": "string",
+      "description": "Paste the OTP from Mailpit (http://localhost:8025) before calling verify-email / reset-password."
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Registration & Email Verification",
+      "description": "The signup flow. Register → check Mailpit at http://localhost:8025 → verify-email with the OTP. Login is blocked until verification.",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Response is successful\", () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "});",
+                  "console.log(\"✓ Open http://localhost:8025 to read the OTP from Mailpit.\");"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{testUsername}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"fullName\": \"Prashant Sharma\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Creates a new user and sends a 6-digit OTP via email. Returns 201 on success, 409 if email/username is taken, 400 on validation errors."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get('otp')) {",
+                  "    console.warn('⚠ Set the `otp` collection variable to the code from Mailpit before running this.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Email verified\", () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"otp\": \"{{otp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-email"]
+            },
+            "description": "Confirms email ownership using the OTP delivered to Mailpit. Returns 200 on success, 400 with `INVALID_OTP` if expired/wrong."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-otp"]
+            },
+            "description": "Issues a fresh verification OTP. Fails with 409 if the email is already verified."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Login & Tokens",
+      "description": "Login returns a 15-minute access token and 7-day refresh token. Tokens are auto-saved into collection variables by these test scripts.",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test(\"Tokens returned\", () => {",
+                  "    pm.expect(body.data).to.have.property('accessToken');",
+                  "    pm.expect(body.data).to.have.property('refreshToken');",
+                  "});",
+                  "",
+                  "if (body.data && body.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', body.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', body.data.refreshToken);",
+                  "    console.log('✓ accessToken and refreshToken saved to collection variables.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Returns access + refresh tokens on success. Possible failures: 401 (`AUTHENTICATION_FAILED`), 403 (`EMAIL_NOT_VERIFIED`), 423 (`ACCOUNT_LOCKED`), 429 (`RATE_LIMIT_EXCEEDED`).\n\nThis endpoint is rate-limited to 10 requests/minute per IP."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const body = pm.response.json();",
+                  "if (body.data && body.data.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', body.data.accessToken);",
+                  "    pm.collectionVariables.set('refreshToken', body.data.refreshToken);",
+                  "    console.log('✓ Rotated. New access + refresh tokens saved.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Exchanges the refresh token for a new access + refresh pair. The old refresh token is revoked immediately — reusing it returns 401 (`INVALID_TOKEN`) and revokes the entire token family for that user."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('accessToken', '');",
+                  "pm.collectionVariables.set('refreshToken', '');",
+                  "console.log('✓ Logged out — tokens cleared from collection variables.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Blacklists the current access token in Redis (until natural expiry) and revokes all refresh tokens for the user. Subsequent requests with the same access token return 401."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Password Reset",
+      "description": "Forgot password → check Mailpit for OTP → reset password. Note: forgot-password is also rate-limited.",
+      "item": [
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password"]
+            },
+            "description": "Sends a password-reset OTP to the user's email. Always returns 200 with a generic message (to avoid leaking which emails are registered). Rate-limited."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"otp\": \"{{otp}}\",\n  \"newPassword\": \"NewStrongP@ss1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset-password"]
+            },
+            "description": "Resets the password using the OTP from the forgot-password email. On success, all existing refresh tokens are revoked — the user must log in again. Remember to update the `testPassword` variable after this."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Authenticated User",
+      "description": "Endpoints that require `Authorization: Bearer <accessToken>`. The accessToken is auto-injected from the collection variable.",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Returns the authenticated user. Fails with 401 if the access token is missing, invalid, blacklisted (post-logout), or expired."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Negative & Edge Cases",
+      "description": "Requests designed to fail — useful for exploring error responses and verifying the security features in the video.",
+      "item": [
+        {
+          "name": "Register — duplicate email (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{testUsername}}\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\",\n  \"fullName\": \"Duplicate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Run after a successful Register. Expect 409 `CONFLICT`."
+          },
+          "response": []
+        },
+        {
+          "name": "Register — weak password (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"weakpass_user\",\n  \"email\": \"weak@example.com\",\n  \"password\": \"password\",\n  \"fullName\": \"Weak Password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Password lacks uppercase, digit, and special character. Expect 400 `VALIDATION_ERROR`."
+          },
+          "response": []
+        },
+        {
+          "name": "Login — wrong password (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"WrongP@ss1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Expect 401 `AUTHENTICATION_FAILED`. Repeat 5 times to trigger account lockout."
+          },
+          "response": []
+        },
+        {
+          "name": "Login — locked account (423)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "After 5 failed login attempts, this returns 423 `ACCOUNT_LOCKED` even with the correct password. Lockout persists 30 minutes across app restarts."
+          },
+          "response": []
+        },
+        {
+          "name": "Protected route — no token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Calling `/me` without a Bearer token returns 401."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh — reuse old token (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"already-rotated-or-revoked-token\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "After a refresh, the old token is dead. Reusing it returns 401 `INVALID_TOKEN` and revokes the user's entire refresh-token family."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
