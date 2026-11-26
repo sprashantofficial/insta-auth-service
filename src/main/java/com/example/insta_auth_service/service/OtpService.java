@@ -1,5 +1,6 @@
 package com.example.insta_auth_service.service;
 
+import com.example.insta_auth_service.exception.InvalidOtpException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,7 +46,7 @@ public class OtpService {
         String currentAttempts = stringRedisTemplate.opsForValue().get(attemptsKey);
 
         if (currentAttempts != null && Integer.parseInt(currentAttempts) >= MAX_OTP_ATTEMPTS) {
-            throw new RuntimeException("Too many OTP attempts. Please request a new OTP.");
+            throw new InvalidOtpException("Too many OTP attempts. Please request a new OTP.");
         }
 
         String key = buildKey(email, type);
