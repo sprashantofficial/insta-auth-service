@@ -3,13 +3,13 @@ package com.example.insta_auth_service.exception;
 import com.example.insta_auth_service.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.nio.file.AccessDeniedException;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -76,8 +76,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handeGeneric(Exception ex) {
+        // Log the details for us; never send raw exception messages to the client.
         log.error("Unexpected error: {}", ex.getMessage(), ex);
-        return ApiResponse.error(ex.getMessage(), "INTERNAL_ERROR");
+        return ApiResponse.error("Something went wrong. Please try again.", "INTERNAL_ERROR");
     }
 
 }

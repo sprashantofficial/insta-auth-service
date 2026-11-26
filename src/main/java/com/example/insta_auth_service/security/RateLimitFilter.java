@@ -73,11 +73,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
-
+        // Don't read X-Forwarded-For directly: any client can set it and get a fresh bucket
+        // on every request. Behind a trusted proxy or load balancer, set
+        // server.forward-headers-strategy so Spring puts the real client IP in getRemoteAddr().
         return request.getRemoteAddr();
     }
 
